@@ -58,7 +58,12 @@ def U_inc(X: float_array, Y: float_array, k: float, theta_inc: float, U: complex
     dy = np.sin(theta_inc)
     return U*np.exp(1j*k*(dx*X + dy*Y))
 
-
+def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, A: complex_array, B: complex_array) -> complex_array:
+    M = (len(A)-1)//2
+    n = np.arange(-M, M+1, dtype=np.int64)
+    r = np.hypot(X, Y)
+    theta = np.angle(X, Y)
+    U_in = np.sum( J(n,k*r) 
 
 
 if __name__ == "__main__":
