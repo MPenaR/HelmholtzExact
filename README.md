@@ -12,10 +12,8 @@ jupyter:
     name: python3
 ---
 
-
-#HelmholtzExact
+# HelmholtzExact
 A collection of functions to exactly solve the Helmholtz equation for scattering problems.
-
 
 
 ```python3

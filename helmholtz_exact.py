@@ -50,7 +50,7 @@ def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_i
     
     return (A, B) 
 
-def U_inc(X: float_array, Y: float_array, k: float, theta_inc: float, U: complex) -> complex_array: 
+def U_inc(X: float_array, Y: float_array, k: float, theta_inc: float = 0., U: complex = 1 + 0j) -> complex_array: 
     """
     Evaluates the incident field in all the (x,y) points given
     """
@@ -58,12 +58,23 @@ def U_inc(X: float_array, Y: float_array, k: float, theta_inc: float, U: complex
     dy = np.sin(theta_inc)
     return U*np.exp(1j*k*(dx*X + dy*Y))
 
-def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, A: complex_array, B: complex_array) -> complex_array:
+def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
+                      c: float_array, R: float, U: complex,
+                      theta_inc: float, A: complex_array, B: complex_array) -> complex_array:
     M = (len(A)-1)//2
     n = np.arange(-M, M+1, dtype=np.int64)
     r = np.hypot(X, Y)
-    theta = np.angle(X, Y)
-    U_in = np.sum( J(n,k*r) 
+    n = np.expand_dims(n, axis = np.arange(X.ndim).tolist())
+    r = np.expand_dims(r, axis = -1)
+    theta = np.arctan(Y, X)
+    theta = np.expand_dims( theta, axis = -1)
+    U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
+    U_out = U_inc(X, Y, k, theta_inc, U) + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
+    U_tot = np.where(r > R, U_out, U_in)
+    return U_tot
+
+
+
 
 
 if __name__ == "__main__":
