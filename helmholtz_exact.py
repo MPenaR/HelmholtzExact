@@ -50,6 +50,16 @@ def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_i
     
     return (A, B) 
 
+def U_inc(X: float_array, Y: float_array, k: float, theta_inc: float, U: complex) -> complex_array: 
+    """
+    Evaluates the incident field in all the (x,y) points given
+    """
+    dx = np.cos(theta_inc)
+    dy = np.sin(theta_inc)
+    return U*np.exp(1j*k*(dx*X + dy*Y))
+
+
+
 
 if __name__ == "__main__":
     A, B = CircleDielectricCoeffs(1, 1, 1, np.array([0., 0.]), 0., 10)
