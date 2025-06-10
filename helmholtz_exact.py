@@ -14,7 +14,7 @@ def Det(A_11: complex_array, A_21: complex_array,
     return A_11 * A_22 - A_12*A_21
 
 
-def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_inc: float, M: int) -> tuple[complex_array, complex_array]:
+def DielectricPlaneWaveCoeffs(k: float, N: float, R: float, c: float_array, U: complex, theta_inc: float, M: int) -> tuple[complex_array, complex_array]:
     """Computes the coefficientes of the Bessel expansion of the total field
     inside the scatterer and the scattered field outside.
 
@@ -23,7 +23,8 @@ def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_i
     - N: index of refraction of the scatterer with respect to the background
     - c: center of the circular scatterer
     - R: radius of the circular scatterer
-    - theta_inc: angles that the propagating direction of the incident field 
+    - U: complex amplitude of the incident plane wave
+    - theta_inc: angles that the propagating direction of the incident plane wave 
     forms with the x-axis. 
     - M: number of modes used in the expansion, i.e. n = -M, -M+1, ..., M-1, M
     Outputs:
@@ -35,17 +36,8 @@ def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_i
     # vectorized version
     n = np.arange(-M, M+1, dtype=np.int64)
     W = Det(H1(n,k*R), dH1(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))
-    A = -np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
-    B = -np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
-    # serial version
-#    A = np.zeros(2*M+1, dtype=np.complex128)
-#    B = np.zeros(2*M+1, dtype=np.complex128)
-#
-#    for n in range(-M, M+1):
-#        i = n + M
-#        W = Det(H1(n,k*R), dH1(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))
-#        A[i] = -np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
-#        B[i] = -np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
+    A = -U*np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
+    B = -U*np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
     
     return (A, B) 
 
@@ -74,6 +66,25 @@ def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
     U_tot = np.where(r > R, U_out, U_in)
     return U_tot
 
+def mear_field_plane_wave(xy_E: float_array, xy_R: float_array, k: float, R: float, c: float_array, M: int) -> complex_array:
+    """I don't like this implementation, as if you emmit from a given point
+    your incident field should not be a plane wave"""
+    pass
+
+
+def far_field(theta_E: float_array, theta_R: float_array, k: float, R: float, c: float_array, M: int) -> complex_array:
+    N_E = len(theta_E)
+    N_R = len(theta_R)
+    FF = np.zeros((N_R, N_E), dtype=np.complex128)
+    n = np.arange(-M,M+1)
+    n = np.expand_dims(n,0)
+    theta = np.expand_dims(theta_R, -1)
+    for j, theta_inc in enumerate(theta_E):
+        A, _ = DielectricPlaneWaveCoeffs(k, N, R, c, 1., theta_inc, M)
+        FF[:,j] = np.sqrt(2/np.pi/k)*np.dot(np.exp(1j*n*(theta - np.pi/2) - np.pi/4), A)
+
+    return FF
+
 
 
 
@@ -87,14 +98,21 @@ if __name__ == "__main__":
     theta_inc = np.pi + np.pi/4
     c = np.array([0., 0.])
     M = 10
-    A, B = CircleDielectricCoeffs(k, N, R, c, theta_inc, M)
-    L = 0.1
-    Nx = 200
-    x = np.linspace(-L, L, Nx)
-    y = np.linspace(-L, L, Nx)
-    X, Y = np.meshgrid(x, y)
-    U = U_tot_from_coeffs(X, Y, k, N, c, R, 1. + 0j, theta_inc, A, B)
-    plt.pcolormesh(X, Y, np.real(U))
-    plt.axis('square')
+    U = 1 + 0j
+#    A, B = CircleDielectricCoeffs(k, N, R, c, U, theta_inc, M)
+#    L = 0.1
+#    Nx = 200
+#    x = np.linspace(-L, L, Nx)
+#    y = np.linspace(-L, L, Nx)
+#    X, Y = np.meshgrid(x, y)
+#    U_tot = U_tot_from_coeffs(X, Y, k, N, c, R, U, theta_inc, A, B)
+#    plt.pcolormesh(X, Y, np.real(U_tot))
+#    plt.axis('square')
+#    plt.show()
+    N_E = 36
+    N_R = 72
+    theta_E = np.linspace(0, 2*np.pi, N_E, endpoint=False)
+    theta_R = np.linspace(0, 2*np.pi, N_R, endpoint=True )
+    FF = far_field(theta_E, theta_R, k, R, c, M)
+    plt.matshow(np.abs(FF))
     plt.show()
-    # plt.savefig('test.pdf')
