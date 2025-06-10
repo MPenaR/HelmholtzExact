@@ -35,7 +35,6 @@ def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_i
     # vectorized version
     n = np.arange(-M, M+1, dtype=np.int64)
     W = Det(H1(n,k*R), dH1(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))
-    print(W.shape)
     A = -np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
     B = -np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
     # serial version
@@ -50,9 +49,9 @@ def CircleDielectricCoeffs(k: float, N: float, R: float, c: float_array, theta_i
     
     return (A, B) 
 
-def U_inc(X: float_array, Y: float_array, k: float, theta_inc: float = 0., U: complex = 1 + 0j) -> complex_array: 
+def PlaneWave(X: float_array, Y: float_array, k: float, theta_inc: float = 0., U: complex = 1 + 0j) -> complex_array: 
     """
-    Evaluates the incident field in all the (x,y) points given
+    Evaluates a plane wave field in all the (x,y) points given
     """
     dx = np.cos(theta_inc)
     dy = np.sin(theta_inc)
@@ -66,10 +65,12 @@ def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
     r = np.hypot(X, Y)
     n = np.expand_dims(n, axis = np.arange(X.ndim).tolist())
     r = np.expand_dims(r, axis = -1)
-    theta = np.arctan(Y, X)
+    theta = np.arctan2(Y, X)
     theta = np.expand_dims( theta, axis = -1)
     U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
-    U_out = U_inc(X, Y, k, theta_inc, U) + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
+    U_inc = PlaneWave(X, Y, k, theta_inc, U)
+    U_out = U_inc + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
+    r = np.squeeze(r)
     U_tot = np.where(r > R, U_out, U_in)
     return U_tot
 
@@ -78,5 +79,22 @@ def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
 
 
 if __name__ == "__main__":
-    A, B = CircleDielectricCoeffs(1, 1, 1, np.array([0., 0.]), 0., 10)
-    print(A)
+    import numpy as np 
+    import matplotlib.pyplot as plt
+    k = 200
+    N = 4
+    R = 0.02
+    theta_inc = np.pi + np.pi/4
+    c = np.array([0., 0.])
+    M = 10
+    A, B = CircleDielectricCoeffs(k, N, R, c, theta_inc, M)
+    L = 0.1
+    Nx = 200
+    x = np.linspace(-L, L, Nx)
+    y = np.linspace(-L, L, Nx)
+    X, Y = np.meshgrid(x, y)
+    U = U_tot_from_coeffs(X, Y, k, N, c, R, 1. + 0j, theta_inc, A, B)
+    plt.pcolormesh(X, Y, np.real(U))
+    plt.axis('square')
+    plt.show()
+    # plt.savefig('test.pdf')
