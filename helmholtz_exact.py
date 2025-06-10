@@ -35,9 +35,11 @@ def DielectricPlaneWaveCoeffs(k: float, N: float, R: float, c: float_array, U: c
 
     # vectorized version
     n = np.arange(-M, M+1, dtype=np.int64)
+    dx = np.cos(theta_inc)
+    dy = np.sin(theta_inc)
     W = Det(H1(n,k*R), dH1(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))
-    A = -U*np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
-    B = -U*np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
+    A = -U*np.exp(1j*k*(dx*c[0] + dy*c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
+    B = -U*np.exp(1j*k*(dx*c[0] + dy*c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
     
     return (A, B) 
 
@@ -54,10 +56,10 @@ def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
                       theta_inc: float, A: complex_array, B: complex_array) -> complex_array:
     M = (len(A)-1)//2
     n = np.arange(-M, M+1, dtype=np.int64)
-    r = np.hypot(X, Y)
+    r = np.hypot(X- c[0], Y- c[1])
     n = np.expand_dims(n, axis = np.arange(X.ndim).tolist())
     r = np.expand_dims(r, axis = -1)
-    theta = np.arctan2(Y, X)
+    theta = np.arctan2(Y-c[1], X-c[0])
     theta = np.expand_dims( theta, axis = -1)
     U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
     U_inc = PlaneWave(X, Y, k, theta_inc, U)
@@ -93,26 +95,19 @@ if __name__ == "__main__":
     import numpy as np 
     import matplotlib.pyplot as plt
     k = 200
-    N = 4
+    N = 1
     R = 0.02
     theta_inc = np.pi + np.pi/4
-    c = np.array([0., 0.])
+    c = np.array([0., 0.05])
     M = 10
     U = 1 + 0j
-#    A, B = CircleDielectricCoeffs(k, N, R, c, U, theta_inc, M)
-#    L = 0.1
-#    Nx = 200
-#    x = np.linspace(-L, L, Nx)
-#    y = np.linspace(-L, L, Nx)
-#    X, Y = np.meshgrid(x, y)
-#    U_tot = U_tot_from_coeffs(X, Y, k, N, c, R, U, theta_inc, A, B)
-#    plt.pcolormesh(X, Y, np.real(U_tot))
-#    plt.axis('square')
-#    plt.show()
-    N_E = 36
-    N_R = 72
-    theta_E = np.linspace(0, 2*np.pi, N_E, endpoint=False)
-    theta_R = np.linspace(0, 2*np.pi, N_R, endpoint=True )
-    FF = far_field(theta_E, theta_R, k, R, c, M)
-    plt.matshow(np.abs(FF))
+    A, B = DielectricPlaneWaveCoeffs(k, N, R, c, U, theta_inc, M)
+    L = 0.1
+    Nx = 200
+    x = np.linspace(-L, L, Nx)
+    y = np.linspace(-L, L, Nx)
+    X, Y = np.meshgrid(x, y)
+    U_tot = U_tot_from_coeffs(X, Y, k, N, c, R, U, theta_inc, A, B)
+    plt.pcolormesh(X, Y, np.real(U_tot))
+    plt.axis('square')
     plt.show()
