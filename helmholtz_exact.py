@@ -1,7 +1,7 @@
-import numpy as np 
+import numpy as np
 from scipy.special import hankel1 as H1, jn as J, h1vp as dH1, jvp as dJ
 
-import numpy.typing as npt 
+import numpy.typing as npt
 
 complex_array = npt.NDArray[np.complex128]
 float_array = npt.NDArray[np.float64]
@@ -18,28 +18,28 @@ def DielectricPlaneWaveCoeffs(k: float, N: float, R: float, c: float_array, U: c
     """Computes the coefficientes of the Bessel expansion of the total field
     inside the scatterer and the scattered field outside.
 
-    Inputs: 
+    Inputs:
     - k: wavenumber of the background
     - N: index of refraction of the scatterer with respect to the background
     - c: center of the circular scatterer
     - R: radius of the circular scatterer
     - U: complex amplitude of the incident plane wave
-    - theta_inc: angles that the propagating direction of the incident plane wave 
-    forms with the x-axis. 
+    - theta_inc: angles that the propagating direction of the incident plane wave
+    forms with the x-axis.
     - M: number of modes used in the expansion, i.e. n = -M, -M+1, ..., M-1, M
     Outputs:
-    - A: coefficients of the scattered field outside the scatterer: 
+    - A: coefficients of the scattered field outside the scatterer:
         u_s(r, theta) = sum_{n=-M}^M a_n H^1_n*(k*r)*exp(i*n*theta)
-    - B: coefficients of the total field inside the scatterer: 
-        u(r, theta) = sum_{n=-M}^M b_n*J_n(k*r)*exp(i*n*theta)""" 
+    - B: coefficients of the total field inside the scatterer:
+        u(r, theta) = sum_{n=-M}^M b_n*J_n(k*r)*exp(i*n*theta)"""
 
     # vectorized version
     n = np.arange(-M, M+1, dtype=np.int64)
     dx = np.cos(theta_inc)
     dy = np.sin(theta_inc)
-    W = Det(H1(n,k*R), dH1(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))
-    A = -U*np.exp(1j*k*(dx*c[0] + dy*c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(J(n,k*R), dJ(n,k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
-    B = -U*np.exp(1j*k*(dx*c[0] + dy*c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n,k*R), dH1(n,k*R), J(n,k*R), dJ(n,k*R))/W
+    W = Det(H1(n, k*R), dH1(n, k*R), -J(n, np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n, np.sqrt(N)*k*R))
+    A = -U*np.exp(1j*k*(dx*c[0] + dy*c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(J(n, k*R), dJ(n, k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
+    B = -U*np.exp(1j*k*(dx*c[0] + dy*c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
     
     return (A, B) 
 
@@ -50,6 +50,15 @@ def PlaneWave(X: float_array, Y: float_array, k: float, theta_inc: float = 0., U
     dx = np.cos(theta_inc)
     dy = np.sin(theta_inc)
     return U*np.exp(1j*k*(dx*X + dy*Y))
+
+def Fundamental(X: float_array,
+                Y: float_array,
+                k: float,
+                x_s: float,
+                y_s: float,
+                U: complex = 1.+0.j) -> complex_array:
+    """Evaluates a point source wave"""
+    return U*1j/4  * H1(0, k*np.hypot(X-x_s, Y-y_s))
 
 def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
                       c: float_array, R: float, U: complex,
