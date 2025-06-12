@@ -74,16 +74,18 @@ def mear_field_plane_wave(xy_E: float_array, xy_R: float_array, k: float, R: flo
     pass
 
 
-def far_field(theta_E: float_array, theta_R: float_array, k: float, R: float, c: float_array, M: int) -> complex_array:
+def far_field(theta_E: float_array, theta_R: float_array, k: float, R: float, c: float_array, N: float, M: int) -> complex_array:
     N_E = len(theta_E)
     N_R = len(theta_R)
     FF = np.zeros((N_R, N_E), dtype=np.complex128)
     n = np.arange(-M,M+1)
     n = np.expand_dims(n,0)
     theta = np.expand_dims(theta_R, -1)
+    x_hat = np.cos(theta)
+    y_hat = np.sin(theta)
     for j, theta_inc in enumerate(theta_E):
         A, _ = DielectricPlaneWaveCoeffs(k, N, R, c, 1., theta_inc, M)
-        FF[:,j] = np.sqrt(2/np.pi/k)*np.dot(np.exp(1j*n*(theta - np.pi/2) - np.pi/4), A)
+        FF[:,j] = np.sqrt(2/np.pi/k)*np.dot(np.exp(1j*n*(theta - np.pi/2) - np.pi/4 - c[0]*x_hat - c[1]*y_hat), A)
 
     return FF
 
@@ -95,19 +97,26 @@ if __name__ == "__main__":
     import numpy as np 
     import matplotlib.pyplot as plt
     k = 200
-    N = 1
+    N = 4
     R = 0.02
     theta_inc = np.pi + np.pi/4
     c = np.array([0., 0.05])
     M = 10
     U = 1 + 0j
     A, B = DielectricPlaneWaveCoeffs(k, N, R, c, U, theta_inc, M)
-    L = 0.1
-    Nx = 200
-    x = np.linspace(-L, L, Nx)
-    y = np.linspace(-L, L, Nx)
-    X, Y = np.meshgrid(x, y)
-    U_tot = U_tot_from_coeffs(X, Y, k, N, c, R, U, theta_inc, A, B)
-    plt.pcolormesh(X, Y, np.real(U_tot))
-    plt.axis('square')
+#    L = 0.1
+#    Nx = 200
+#    x = np.linspace(-L, L, Nx)
+#    y = np.linspace(-L, L, Nx)
+#    X, Y = np.meshgrid(x, y)
+#    U_tot = U_tot_from_coeffs(X, Y, k, N, c, R, U, theta_inc, A, B)
+#    plt.pcolormesh(X, Y, np.real(U_tot))
+#    plt.axis('square')
+#    plt.show()
+    N_E = 36
+    N_R = 72
+    theta_E = np.linspace(0, 2*np.pi, N_E, endpoint=False)
+    theta_R = np.linspace(0, 2*np.pi, N_R, endpoint=False)
+    FF = far_field(theta_E, theta_R, k, R, c, M)
+    plt.matshow(np.real(FF))
     plt.show()
