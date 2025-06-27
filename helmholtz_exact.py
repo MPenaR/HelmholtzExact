@@ -94,7 +94,7 @@ def far_field_from_plane_wave(theta_E: float_array, theta_R: float_array, k: flo
     y_hat = np.sin(theta)
     for j, theta_inc in enumerate(theta_E):
         A, _ = DielectricPlaneWaveCoefficients(k, N, R, c, 1., theta_inc, M)
-        FF[:, j] = np.sqrt(2/np.pi/k)*np.dot(np.exp(1j*n*(theta - np.pi/2) - np.pi/4 - c[0]*x_hat - c[1]*y_hat), A)
+        FF[:, j] = np.sqrt(2/np.pi/k)*np.dot(np.exp(1j*(n*(theta - np.pi/2) - np.pi/4 - k*(c[0]*x_hat + c[1]*y_hat))), A)
 
     return FF
 
