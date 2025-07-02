@@ -16,7 +16,8 @@ def Det(A_11: complex_array, A_21: complex_array,
 
 def DielectricPlaneWaveCoefficients(k: float, N: float, R: float, xy_c: float_array, U: complex, theta_inc: float, M: int) -> tuple[complex_array, complex_array]:
     """Computes the coefficientes of the Bessel expansion of the total field
-    inside the scatterer and the scattered field outside.
+    inside the scatterer and the scattered field outside for an incident
+    plane wave.
 
     Inputs:
     - k: wavenumber of the background
@@ -42,6 +43,37 @@ def DielectricPlaneWaveCoefficients(k: float, N: float, R: float, xy_c: float_ar
     B = -U*np.exp(1j*k*(dx*xy_c[0] + dy*xy_c[1]))*np.exp(-1j*n*theta_inc)*1j**n*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
     
     return (A, B) 
+
+
+def DielectricHankelCoefficients(k: float, N: float, R: float, xy_c: float_array, U: complex, r_E: float_array, M: int) -> tuple[complex_array, complex_array]:
+    """Computes the coefficientes of the Bessel expansion of the total field
+    inside the scatterer and the scattered field outside for an incident
+    Hankel wave.
+
+    Inputs:
+    - k: wavenumber of the background
+    - N: index of refraction of the scatterer with respect to the background
+    - c: center of the circular scatterer
+    - R: radius of the circular scatterer
+    - U: complex amplitude of the incident plane wave
+    - r_E: location of the emitter.
+    - M: number of modes used in the expansion, i.e. n = -M, -M+1, ..., M-1, M
+    Outputs:
+    - A: coefficients of the scattered field outside the scatterer:
+        u_s(r, theta) = sum_{n=-M}^M a_n H^1_n*(k*r)*exp(i*n*theta)
+    - B: coefficients of the total field inside the scatterer:
+        u(r, theta) = sum_{n=-M}^M b_n*J_n(k*r)*exp(i*n*theta)"""
+    r_cE = np.sqrt((r_E[0] - xy_c[0])**2 + (r_E[1] - xy_c[1])**2)
+    # vectorized version
+    n = np.arange(-M, M+1, dtype=np.int64)
+    W = Det(H1(n, k*R), dH1(n, k*R), -J(n, np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n, np.sqrt(N)*k*R))
+    A = -U*H1(n,k*r_cE)*Det(J(n, k*R), dJ(n, k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
+    B = -U*H1(n,k*r_cE)*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
+    
+    return (A, B) 
+
+
+
 
 def PlaneWave(X: float_array, Y: float_array, k: float, theta_inc: float = 0., U: complex = 1 + 0j) -> complex_array: 
     """
@@ -72,6 +104,23 @@ def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
     theta = np.expand_dims( theta, axis = -1)
     U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
     U_inc = PlaneWave(X, Y, k, theta_inc, U)
+    U_out = U_inc + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
+    r = np.squeeze(r)
+    U_tot = np.where(r > R, U_out, U_in)
+    return U_tot
+
+def U_tot_from_coeffs2(X: float_array, Y: float_array, k: float, N: float,
+                      c: float_array, R: float, U: complex,
+                      r_E: float_array, A: complex_array, B: complex_array) -> complex_array:
+    M = (len(A)-1)//2
+    n = np.arange(-M, M+1, dtype=np.int64)
+    r = np.hypot(X- c[0], Y- c[1])
+    n = np.expand_dims(n, axis = np.arange(X.ndim).tolist())
+    r = np.expand_dims(r, axis = -1)
+    theta = np.arctan2(Y-c[1], X-c[0])
+    theta = np.expand_dims( theta, axis = -1)
+    U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
+    U_inc = Fundamental(X,Y,k,r_E[0],r_E[1], U)
     U_out = U_inc + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
     r = np.squeeze(r)
     U_tot = np.where(r > R, U_out, U_in)
