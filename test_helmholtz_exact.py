@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
-from helmholtz_exact import DielectricPlaneWaveCoefficients, far_field_from_plane_wave, U_tot_from_coeffs
+from helmholtz_exact import DielectricPlaneWaveCoefficients, far_field_from_plane_wave 
+from helmholtz_exact import PlaneWave, U_tot_from_coefficients
 from netgen.geom2d import SplineGeometry
 from ngsolve import Mesh, H1, BilinearForm, SymbolicBFI, grad, pml 
 from ngsolve import GridFunction, LinearForm, SymbolicLFI, specialcf, Integrate, BND
@@ -89,6 +90,8 @@ def test_total_field():
 
     theta_inc = THETA_E[20]
     d = np.array([np.cos(theta_inc), np.sin(theta_inc)])
+    U = 1 + 0j
+ 
     u_inc_ns = U*ns.exp( 1j*k*( d[0]*ns.x + d[1]*ns.y) )  #plane wave with U amplitude at origin
     l = LinearForm(H)
     l += SymbolicLFI((n-1)*k**2*u_inc_ns * v)
@@ -104,7 +107,9 @@ def test_total_field():
     y = np.linspace(-L,L,Nx)
     X, Y = np.meshgrid(x,y)
     A, B = DielectricPlaneWaveCoefficients(k, eps_r, R_sc, xy_c, 1., theta_inc, NUMBER_OF_MODES)
-    Z = U_tot_from_coeffs(X=X, Y=Y, k=k, N=eps_r,c=xy_c, R=R_sc, U=1+0j,theta_inc=theta_inc, A=A, B=B)
+    d_inc = np.array([np.cos(theta_inc), np.sin(theta_inc)])
+    U_inc = PlaneWave(X, Y, k, d_inc, U)
+    Z = U_tot_from_coefficients(X=X, Y=Y, k=k, N=eps_r,c=xy_c, R=R_sc, U=U, U_inc=U_inc, A=A, B=B)
     Z_FEM = u_TOT(Omega(X.flatten(),Y.flatten())).reshape(X.shape)
 
     assert_allclose(Z_FEM, Z, rtol=1E-2)

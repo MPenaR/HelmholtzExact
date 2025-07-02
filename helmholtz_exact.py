@@ -100,40 +100,6 @@ def HankelWave(X: float_array,
     return U * H1(0, k*np.hypot(X-x_s, Y-y_s))
 
 
-def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
-                      c: float_array, R: float, U: complex,
-                      theta_inc: float, A: complex_array, B: complex_array) -> complex_array:
-    M = (len(A)-1)//2
-    n = np.arange(-M, M+1, dtype=np.int64)
-    r = np.hypot(X- c[0], Y- c[1])
-    n = np.expand_dims(n, axis = np.arange(X.ndim).tolist())
-    r = np.expand_dims(r, axis = -1)
-    theta = np.arctan2(Y-c[1], X-c[0])
-    theta = np.expand_dims( theta, axis = -1)
-    U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
-    U_inc = PlaneWave(X, Y, k, theta_inc, U)
-    U_out = U_inc + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
-    r = np.squeeze(r)
-    U_tot = np.where(r > R, U_out, U_in)
-    return U_tot
-
-def U_tot_from_coeffs2(X: float_array, Y: float_array, k: float, N: float,
-                      c: float_array, R: float, U: complex,
-                      r_E: float_array, A: complex_array, B: complex_array) -> complex_array:
-    M = (len(A)-1)//2
-    n = np.arange(-M, M+1, dtype=np.int64)
-    r = np.hypot(X- c[0], Y- c[1])
-    n = np.expand_dims(n, axis = np.arange(X.ndim).tolist())
-    r = np.expand_dims(r, axis = -1)
-    theta = np.arctan2(Y-c[1], X-c[0])
-    theta = np.expand_dims( theta, axis = -1)
-    U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
-    U_inc = Fundamental(X,Y,k,r_E[0],r_E[1], U)
-    U_out = U_inc + np.dot(H1(n,k*r)*np.exp(1j*n*theta), A)
-    r = np.squeeze(r)
-    U_tot = np.where(r > R, U_out, U_in)
-    return U_tot
-
 def U_tot_from_coefficients(X: float_array, Y: float_array, k: float, N: float,
                       c: float_array, R: float, U: complex,
                       U_inc: complex_array, A: complex_array, B: complex_array) -> complex_array:
