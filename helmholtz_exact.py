@@ -67,30 +67,38 @@ def DielectricHankelCoefficients(k: float, N: float, R: float, xy_c: float_array
     # vectorized version
     n = np.arange(-M, M+1, dtype=np.int64)
     W = Det(H1(n, k*R), dH1(n, k*R), -J(n, np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n, np.sqrt(N)*k*R))
-    A = -U*H1(n,k*r_cE)*Det(J(n, k*R), dJ(n, k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
-    B = -U*H1(n,k*r_cE)*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
+    A = -U*H1(n, k*r_cE)*Det(J(n, k*R), dJ(n, k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
+    B = -U*H1(n, k*r_cE)*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
     
     return (A, B) 
 
 
 
 
-def PlaneWave(X: float_array, Y: float_array, k: float, theta_inc: float = 0., U: complex = 1 + 0j) -> complex_array: 
+def PlaneWave(X: float_array, Y: float_array, k: float, d: float_array, U: complex = 1 + 0j) -> complex_array: 
     """
     Evaluates a plane wave field in all the (x,y) points given
     """
-    dx = np.cos(theta_inc)
-    dy = np.sin(theta_inc)
-    return U*np.exp(1j*k*(dx*X + dy*Y))
+    return U*np.exp(1j*k*(d[0]*X + d[1]*Y))
 
-def Fundamental(X: float_array,
+# def Fundamental(X: float_array,
+#                 Y: float_array,
+#                 k: float,
+#                 x_s: float,
+#                 y_s: float,
+#                 U: complex = 1.+0.j) -> complex_array:
+#     """Evaluates a point source wave"""
+#     return U*1j/4  * H1(0, k*np.hypot(X-x_s, Y-y_s))
+
+def HankelWave(X: float_array,
                 Y: float_array,
                 k: float,
                 x_s: float,
                 y_s: float,
                 U: complex = 1.+0.j) -> complex_array:
     """Evaluates a point source wave"""
-    return U*1j/4  * H1(0, k*np.hypot(X-x_s, Y-y_s))
+    return U * H1(0, k*np.hypot(X-x_s, Y-y_s))
+
 
 def U_tot_from_coeffs(X: float_array, Y: float_array, k: float, N: float,
                       c: float_array, R: float, U: complex,
@@ -125,6 +133,25 @@ def U_tot_from_coeffs2(X: float_array, Y: float_array, k: float, N: float,
     r = np.squeeze(r)
     U_tot = np.where(r > R, U_out, U_in)
     return U_tot
+
+def U_tot_from_coefficients(X: float_array, Y: float_array, k: float, N: float,
+                      c: float_array, R: float, U: complex,
+                      U_inc: complex_array, A: complex_array, B: complex_array) -> complex_array:
+    M = (len(A)-1)//2
+    n = np.arange(-M, M+1, dtype=np.int64)
+    r = np.hypot(X-c[0], Y-c[1])
+    n = np.expand_dims(n, axis=np.arange(X.ndim).tolist())
+    r = np.expand_dims(r, axis=-1)
+    theta = np.arctan2(Y-c[1], X-c[0])
+    theta = np.expand_dims(theta, axis=-1)
+    U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
+    U_out = U_inc + np.dot(H1(n, k*r)*np.exp(1j*n*theta), A)
+    r = np.squeeze(r)
+    U_tot = np.where(r > R, U_out, U_in)
+    return U_tot
+
+
+
 
 def mear_field_plane_wave(xy_E: float_array, xy_R: float_array, k: float, R: float, c: float_array, M: int) -> complex_array:
     """I don't like this implementation, as if you emmit from a given point
