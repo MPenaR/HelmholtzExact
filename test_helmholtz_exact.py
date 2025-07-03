@@ -10,7 +10,7 @@ import ngsolve as ns
 from scipy.special import j0, y0
 
 NUMBER_OF_MODES = 10
-eps_r = 4.   
+eps_r = 3.   
 k = 200. 
 x_sc = 0.
 y_sc = 30E-3
@@ -148,7 +148,7 @@ def test_total_field_Hankelwave():
     Omega = Mesh(geo.GenerateMesh())
     
     Omega.Curve(3)
-    alpha = 0.3
+    alpha = 0.15
     # the alpha probably will need to be adjusted
     Omega.SetPML(pml.Radial(rad=R_PML,alpha=alpha*1j,origin=(0,0)),"PML")
 
@@ -173,7 +173,7 @@ def test_total_field_Hankelwave():
     a.Assemble()
     A_inv = a.mat.Inverse()
 
-    r_s = r_E[0]
+    r_s = r_E[20]
     d = np.array([np.cos(theta_inc), np.sin(theta_inc)])
     U = 1 + 0j
  
@@ -195,7 +195,7 @@ def test_total_field_Hankelwave():
     
     import matplotlib.pyplot as plt
     from matplotlib.tri import Triangulation
-    from matplotlib.patches import Rectangle
+    from matplotlib.patches import Rectangle, Circle
     triangles = np.array([[v.nr for v in f.vertices] for f in Omega.faces])
     tri = Triangulation(points[:,0], points[:,1], triangles)
 
@@ -214,20 +214,24 @@ def test_total_field_Hankelwave():
 
     fig, ax = plt.subplots(ncols=3, nrows=2)
     ax[0,0].tripcolor(tri, np.real(u_inc_np))
-    ax[0,0].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='w', facecolor='none', linestyle='--'))
+    ax[0,0].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
+    ax[0,0].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
+
     ax[0,0].axis("square")
     ax[0,0].set_title('u_inc_np')
     
     u_FEM_np = u_FEM(Omega(points[:,0],points[:,1]))
     ax[0,1].tripcolor(tri, np.real(u_FEM_np[:,0]))
-    ax[0,1].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='w', facecolor='none', linestyle='--'))
+    ax[0,1].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
+    ax[0,1].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
     ax[0,1].axis("square")
     ax[0,1].set_title('u_sc_np')
     
 
     u_TOT_np = u_TOT(Omega(points[:,0],points[:,1]))
     ax[0,2].tripcolor(tri, np.real(u_TOT_np[:,0]))
-    ax[0,2].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='w', facecolor='none', linestyle='--'))
+    ax[0,2].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
+    ax[0,2].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
     ax[0,2].axis("square")
     ax[0,2].set_title('u_TOT_np')
 
@@ -236,16 +240,16 @@ def test_total_field_Hankelwave():
     # ax[1,0].axis('square')
     # ax[1,0].set_title('U_inc')
 
-    ax[1,0].pcolormesh(X,Y,np.real(Z))
+    ax[1,0].pcolormesh(X,Y,np.real(Z), shading="gouraud")
     ax[1,0].axis('square')
     ax[1,0].set_title('u_TOT (series)')
 
     
-    ax[1,1].pcolormesh(X,Y,np.real(Z_FEM))
+    ax[1,1].pcolormesh(X,Y,np.real(Z_FEM), shading="gouraud")
     ax[1,1].set_title('u_TOT (FEM)')
     ax[1,1].axis('square')
     
-    ax[1,2].pcolormesh(X,Y,np.abs(Z_FEM - Z))
+    ax[1,2].pcolormesh(X,Y,np.abs(Z_FEM - Z), shading="gouraud")
     ax[1,2].set_title('difference')
     ax[1,2].axis('square')
     

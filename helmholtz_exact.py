@@ -64,11 +64,12 @@ def DielectricHankelCoefficients(k: float, N: float, R: float, xy_c: float_array
     - B: coefficients of the total field inside the scatterer:
         u(r, theta) = sum_{n=-M}^M b_n*J_n(k*r)*exp(i*n*theta)"""
     r_cE = np.sqrt((r_E[0] - xy_c[0])**2 + (r_E[1] - xy_c[1])**2)
+    theta_E = np.atan2(r_E[1], r_E[0])
     # vectorized version
     n = np.arange(-M, M+1, dtype=np.int64)
     W = Det(H1(n, k*R), dH1(n, k*R), -J(n, np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n, np.sqrt(N)*k*R))
-    A = -U*H1(n, k*r_cE)*Det(J(n, k*R), dJ(n, k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
-    B = -U*H1(n, k*r_cE)*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
+    A = -U*H1(n, k*r_cE)*np.exp(-1j*n*theta_E)*Det(J(n, k*R), dJ(n, k*R), -J(n,np.sqrt(N)*k*R), -np.sqrt(N)*dJ(n,np.sqrt(N)*k*R))/W        
+    B = -U*H1(n, k*r_cE)*np.exp(-1j*n*theta_E)*Det(H1(n, k*R), dH1(n, k*R), J(n,k*R), dJ(n,k*R))/W
     
     return (A, B) 
 
