@@ -126,7 +126,7 @@ def mear_field_plane_wave(xy_E: float_array, xy_R: float_array, k: float, R: flo
     pass
 
 
-def far_field_from_plane_wave(theta_E: float_array, theta_R: float_array, k: float, R: float, c: float_array, N: float, M: int) -> complex_array:
+def far_field_from_plane_wave(theta_E: float_array, theta_R: float_array, U: complex, k: float, R: float, c: float_array, N: float, M: int) -> complex_array:
     N_E = len(theta_E)
     N_R = len(theta_R)
     FF = np.zeros((N_R, N_E), dtype=np.complex128)
@@ -136,7 +136,7 @@ def far_field_from_plane_wave(theta_E: float_array, theta_R: float_array, k: flo
     x_hat = np.cos(theta)
     y_hat = np.sin(theta)
     for j, theta_inc in enumerate(theta_E):
-        A, _ = DielectricPlaneWaveCoefficients(k, N, R, c, 1., theta_inc, M)
+        A, _ = DielectricPlaneWaveCoefficients(k, N, R, c, U, theta_inc, M)
         FF[:, j] = np.sqrt(2/np.pi/k)*np.dot(np.exp(1j*(n*(theta - np.pi/2) - np.pi/4 - k*(c[0]*x_hat + c[1]*y_hat))), A)
 
     return FF
