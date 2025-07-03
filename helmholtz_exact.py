@@ -110,7 +110,7 @@ def U_tot_from_coefficients(X: float_array, Y: float_array, k: float, N: float,
     r = np.expand_dims(r, axis=-1)
     theta = np.arctan2(Y-c[1], X-c[0])
     theta = np.expand_dims(theta, axis=-1)
-    U_in  = np.dot( J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
+    U_in  = np.dot(J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
     U_out = U_inc + np.dot(H1(n, k*r)*np.exp(1j*n*theta), A)
     r = np.squeeze(r)
     U_tot = np.where(r > R, U_out, U_in)
