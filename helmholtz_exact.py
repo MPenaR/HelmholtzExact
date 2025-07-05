@@ -44,6 +44,31 @@ def DielectricPlaneWaveCoefficients(k: float, N: float, R: float, xy_c: float_ar
     
     return (A, B) 
 
+def ConductingPlaneWaveCoefficients(k: float, R: float, xy_c: float_array, U: complex, theta_inc: float, M: int) -> tuple[complex_array, complex_array]:
+    """Computes the coefficientes of the Bessel expansion of the scattered field outside
+    a conducting scatterer for an incident plane wave.
+
+    Inputs:
+    - k: wavenumber of the background
+    - c: center of the circular scatterer
+    - R: radius of the circular scatterer
+    - U: complex amplitude of the incident plane wave
+    - theta_inc: angles that the propagating direction of the incident plane wave
+    forms with the x-axis.
+    - M: number of modes used in the expansion, i.e. n = -M, -M+1, ..., M-1, M
+    Outputs:
+    - A: coefficients of the scattered field outside the scatterer:
+        u_s(r, theta) = sum_{n=-M}^M a_n H^1_n*(k*r)*exp(i*n*theta)"""
+
+    # vectorized version
+    n = np.arange(-M, M+1, dtype=np.int64)
+    dx = np.cos(theta_inc)
+    dy = np.sin(theta_inc)
+    A = -U*np.exp(1j*k*(dx*xy_c[0] + dy*xy_c[1]))*np.exp(-1j*n*theta_inc)*1j**n*J(n, k*R)/H1(n, k*R)
+    
+    return A
+
+
 
 def DielectricHankelCoefficients(k: float, N: float, R: float, xy_c: float_array, U: complex, r_E: float_array, M: int) -> tuple[complex_array, complex_array]:
     """Computes the coefficientes of the Bessel expansion of the total field
@@ -104,6 +129,22 @@ def HankelWave(X: float_array,
 def U_tot_from_coefficients(X: float_array, Y: float_array, k: float, N: float,
                       c: float_array, R: float, U: complex,
                       U_inc: complex_array, A: complex_array, B: complex_array) -> complex_array:
+    M = (len(A)-1)//2
+    n = np.arange(-M, M+1, dtype=np.int64)
+    r = np.hypot(X-c[0], Y-c[1])
+    n = np.expand_dims(n, axis=np.arange(X.ndim).tolist())
+    r = np.expand_dims(r, axis=-1)
+    theta = np.arctan2(Y-c[1], X-c[0])
+    theta = np.expand_dims(theta, axis=-1)
+    U_in  = np.dot(J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
+    U_out = U_inc + np.dot(H1(n, k*r)*np.exp(1j*n*theta), A)
+    r = np.squeeze(r)
+    U_tot = np.where(r > R, U_out, U_in)
+    return U_tot
+
+def U_tot_from_coefficients_conducting(X: float_array, Y: float_array, k: float, N: float,
+                      c: float_array, R: float, U: complex,
+                      U_inc: complex_array, A: complex_array) -> complex_array:
     M = (len(A)-1)//2
     n = np.arange(-M, M+1, dtype=np.int64)
     r = np.hypot(X-c[0], Y-c[1])

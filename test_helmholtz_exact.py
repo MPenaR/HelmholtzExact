@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
 from helmholtz_exact import DielectricPlaneWaveCoefficients, DielectricHankelCoefficients, far_field_from_plane_wave 
-from helmholtz_exact import PlaneWave, HankelWave, U_tot_from_coefficients
+from helmholtz_exact import PlaneWave, HankelWave, U_tot_from_coefficients, ConductingPlaneWaveCoefficients
 from netgen.geom2d import SplineGeometry
 from ngsolve import Mesh, H1, BilinearForm, SymbolicBFI, grad, pml 
 from ngsolve import GridFunction, LinearForm, SymbolicLFI, specialcf, Integrate, BND
@@ -211,49 +211,172 @@ def test_total_field_Hankelwave():
     Z = U_tot_from_coefficients(X=X, Y=Y, k=k, N=eps_r,c=xy_c, R=R_sc, U=U, U_inc=U_inc, A=A, B=B)
     Z_FEM = u_TOT(Omega(X.flatten(),Y.flatten())).reshape(X.shape)
 
-    fig, ax = plt.subplots(ncols=3, nrows=2)
-    ax[0,0].tripcolor(tri, np.real(u_inc_np))
-    ax[0,0].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
-    ax[0,0].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
+    # fig, ax = plt.subplots(ncols=3, nrows=2)
+    # ax[0,0].tripcolor(tri, np.real(u_inc_np))
+    # ax[0,0].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
+    # ax[0,0].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
 
-    ax[0,0].axis("square")
-    ax[0,0].set_title('u_inc_np')
+    # ax[0,0].axis("square")
+    # ax[0,0].set_title('u_inc_np')
     
-    u_FEM_np = u_FEM(Omega(points[:,0],points[:,1]))
-    ax[0,1].tripcolor(tri, np.real(u_FEM_np[:,0]))
-    ax[0,1].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
-    ax[0,1].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
-    ax[0,1].axis("square")
-    ax[0,1].set_title('u_sc_np')
+    # u_FEM_np = u_FEM(Omega(points[:,0],points[:,1]))
+    # ax[0,1].tripcolor(tri, np.real(u_FEM_np[:,0]))
+    # ax[0,1].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
+    # ax[0,1].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
+    # ax[0,1].axis("square")
+    # ax[0,1].set_title('u_sc_np')
     
 
-    u_TOT_np = u_TOT(Omega(points[:,0],points[:,1]))
-    ax[0,2].tripcolor(tri, np.real(u_TOT_np[:,0]))
-    ax[0,2].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
-    ax[0,2].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
-    ax[0,2].axis("square")
-    ax[0,2].set_title('u_TOT_np')
+    # u_TOT_np = u_TOT(Omega(points[:,0],points[:,1]))
+    # ax[0,2].tripcolor(tri, np.real(u_TOT_np[:,0]))
+    # ax[0,2].add_patch(Rectangle(xy=(-L,-L),height=2*L, width=2*L, edgecolor='k', facecolor='none', linestyle='--'))
+    # ax[0,2].add_patch(Circle(xy=(0,0), radius=R_PML, edgecolor='w', facecolor='none', linestyle='--'))
+    # ax[0,2].axis("square")
+    # ax[0,2].set_title('u_TOT_np')
 
     
-    # ax[1,0].pcolormesh(X,Y,np.real(U_inc))
+    # # ax[1,0].pcolormesh(X,Y,np.real(U_inc))
+    # # ax[1,0].axis('square')
+    # # ax[1,0].set_title('U_inc')
+
+    # ax[1,0].pcolormesh(X,Y,np.real(Z), shading="gouraud")
     # ax[1,0].axis('square')
-    # ax[1,0].set_title('U_inc')
-
-    ax[1,0].pcolormesh(X,Y,np.real(Z), shading="gouraud")
-    ax[1,0].axis('square')
-    ax[1,0].set_title('u_TOT (series)')
+    # ax[1,0].set_title('u_TOT (series)')
 
     
-    ax[1,1].pcolormesh(X,Y,np.real(Z_FEM), shading="gouraud")
-    ax[1,1].set_title('u_TOT (FEM)')
-    ax[1,1].axis('square')
+    # ax[1,1].pcolormesh(X,Y,np.real(Z_FEM), shading="gouraud")
+    # ax[1,1].set_title('u_TOT (FEM)')
+    # ax[1,1].axis('square')
     
-    ax[1,2].pcolormesh(X,Y,np.abs(Z_FEM - Z), shading="gouraud")
-    ax[1,2].set_title('difference')
-    ax[1,2].axis('square')
+    # ax[1,2].pcolormesh(X,Y,np.abs(Z_FEM - Z), shading="gouraud")
+    # ax[1,2].set_title('difference')
+    # ax[1,2].axis('square')
     
     # plt.show()
     assert_allclose(Z_FEM, Z, rtol=1E1)
+
+
+
+def test_total_field_conducting_Planewave():
+    geo = SplineGeometry()
+    
+    landa = 2*np.pi/k
+    R_PML = np.sqrt(x_sc**2 + y_sc**2) + R_sc + 2*landa
+    delta_PML = 2*landa
+    
+    background_ID = 1
+    PML_ID = 2
+    scatterer_ID = 3
+
+
+    geo.AddCircle( (0,0), R_PML+delta_PML, leftdomain=PML_ID, bc="outerbnd") # computational domain with PML
+    geo.AddCircle( (0,0), R_PML, leftdomain=background_ID, rightdomain=PML_ID) # computational domain
+
+    # adding the scatterer:
+
+    geo.AddCircle( (x_sc, y_sc), R_sc, leftdomain=0, rightdomain=background_ID, bc="scatterer")
+ 
+    geo.SetMaterial(background_ID,"background")
+    geo.SetMaterial(PML_ID,"PML")
+    
+
+    h_max = landa/16
+
+    geo.SetDomainMaxH(PML_ID,h_max)
+    geo.SetDomainMaxH(background_ID,h_max)
+    
+    Omega = Mesh(geo.GenerateMesh())
+    
+    Omega.Curve(3)
+    alpha = 0.15
+    # the alpha probably will need to be adjusted
+    Omega.SetPML(pml.Radial(rad=R_PML,alpha=alpha*1j,origin=(0,0)),"PML")
+
+    # variational formulation
+    polynomial_order = 4
+    n_values = { "scatterer" : eps_r, "background" : 1, "PML" : 1}
+    n = Omega.MaterialCF(n_values) 
+
+    
+    N = specialcf.normal(Omega.dim)
+
+
+    H = H1(Omega, order = polynomial_order, complex=True, dirichlet="scatterer")
+    u = H.TrialFunction()
+    v = H.TestFunction()
+
+    a = BilinearForm(H)
+    a += SymbolicBFI(grad(u)*grad(v) - n*k**2*u*v)
+    a += SymbolicBFI(-1j*k*u*v,definedon=Omega.Boundaries("outerbnd"))
+
+
+    a.Assemble()
+    A_inv = a.mat.Inverse()
+
+    r_s = r_E[20]
+    d = np.array([np.cos(theta_inc), np.sin(theta_inc)])
+
+ 
+    u_inc_ns = U*ns.exp(1j*k*(ns.x*d[0] + ns.y*d[1]))
+    u_inc_extension = GridFunction(H)
+    u_inc_extension.Set(u_inc_ns, BND)
+
+    # import matplotlib.pyplot as plt
+    # from matplotlib.tri import Triangulation
+    # points = np.array([v.point for v in Omega.vertices])
+    # triangles = np.array([[v.nr for v in f.vertices] for f in Omega.faces])
+    # tri = Triangulation(points[:,0], points[:,1], triangles)
+    # uinc_ext = u_inc_extension(Omega(points[:,0], points[:,1]))[:,0]
+    # plt.tripcolor(tri,np.real(uinc_ext))
+    # plt.axis('square')
+    # plt.show()    
+
+
+    # l = LinearForm(H)
+    # f = LinearForm(1*v*dx).Assemble()
+    # l.Assemble()    
+    r =   a.mat * u_inc_extension.vec
+    
+    u_0 = GridFunction(H)
+    u_0.vec.data += a.mat.Inverse(freedofs=H.FreeDofs()) * r
+
+    # u_FEM = GridFunction(H)
+    # u_FEM.vec.data = A_inv * l.vec
+    # u_TOT = u_FEM + u_inc_ns
+    u_FEM = u_0 + u_inc_extension
+    u_TOT = u_FEM + u_inc_ns
+
+    import matplotlib.pyplot as plt
+    from matplotlib.tri import Triangulation
+    points = np.array([v.point for v in Omega.vertices])
+    triangles = np.array([[v.nr for v in f.vertices] for f in Omega.faces])
+    tri = Triangulation(points[:,0], points[:,1], triangles)
+    u_tot_tri = u_TOT(Omega(points[:,0], points[:,1]))[:,0]
+    plt.tripcolor(tri,np.abs(u_tot_tri))
+    plt.axis('square')
+    plt.show()    
+
+
+
+
+    L =  R_PML/np.sqrt(2)
+    Nx = 100
+    x = np.linspace(-L,L,Nx)
+    y = np.linspace(-L,L,Nx)
+    X, Y = np.meshgrid(x,y)
+    A = ConductingPlaneWaveCoefficients(k, R_sc, xy_c, U, r_s, NUMBER_OF_MODES)
+    d_inc = np.array([np.cos(theta_inc), np.sin(theta_inc)])
+    U_inc = PlaneWave(X, Y, k, d_inc, U)
+    Z = U_tot_from_coefficients(X=X, Y=Y, k=k, N=eps_r,c=xy_c, R=R_sc, U=U, U_inc=U_inc, A=A, B=B)
+    Z_FEM = u_TOT(Omega(X.flatten(),Y.flatten())).reshape(X.shape)
+
+    
+    u_FEM_np = u_FEM(Omega(points[:,0],points[:,1]))
+
+    
+    # plt.show()
+    assert_allclose(Z_FEM, Z, rtol=1E1)
+
 
 
 
