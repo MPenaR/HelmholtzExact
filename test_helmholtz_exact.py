@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
 from helmholtz_exact import DielectricPlaneWaveCoefficients, DielectricHankelCoefficients, far_field_from_plane_wave 
-from helmholtz_exact import PlaneWave, HankelWave, U_tot_from_coefficients, ConductingPlaneWaveCoefficients
+from helmholtz_exact import PlaneWave, HankelWave, U_tot_from_coefficients, ConductingPlaneWaveCoefficients, U_tot_from_coefficients_conducting
 from netgen.geom2d import SplineGeometry
 from ngsolve import Mesh, H1, BilinearForm, SymbolicBFI, grad, pml 
 from ngsolve import GridFunction, LinearForm, SymbolicLFI, specialcf, Integrate, BND
@@ -352,27 +352,37 @@ def test_total_field_conducting_Planewave():
     triangles = np.array([[v.nr for v in f.vertices] for f in Omega.faces])
     tri = Triangulation(points[:,0], points[:,1], triangles)
     u_tot_tri = u_TOT(Omega(points[:,0], points[:,1]))[:,0]
-    plt.tripcolor(tri,np.abs(u_tot_tri))
-    plt.axis('square')
+    
+    fig, ax = plt.subplots(ncols=3)
+    
+    ax[0].tripcolor(tri,np.real(u_tot_tri))
+    ax[0].axis('square')
+    
+
+
+
+    # L =  R_PML/np.sqrt(2)
+    # Nx = 100
+    # x = np.linspace(-L,L,Nx)
+    # y = np.linspace(-L,L,Nx)
+    # X, Y = np.meshgrid(x,y)
+    x = points[:,0]
+    y = points[:,1]
+    A = ConductingPlaneWaveCoefficients(k, R_sc, xy_c, U, theta_inc, NUMBER_OF_MODES)
+    d_inc = np.array([np.cos(theta_inc), np.sin(theta_inc)])
+    U_inc = PlaneWave(x, y, k, d_inc, U)
+    Z = U_tot_from_coefficients_conducting(X=x, Y=y, k=k,c=xy_c, R=R_sc, U=U, U_inc=U_inc, A=A)
+
+    ax[1].tripcolor(tri,np.real(Z))
+    ax[1].axis('square')
+    
+    ax[2].tripcolor(tri,np.abs(Z - u_tot_tri))
+    ax[2].axis('square')
+    
+
     plt.show()    
 
-
-
-
-    L =  R_PML/np.sqrt(2)
-    Nx = 100
-    x = np.linspace(-L,L,Nx)
-    y = np.linspace(-L,L,Nx)
-    X, Y = np.meshgrid(x,y)
-    A = ConductingPlaneWaveCoefficients(k, R_sc, xy_c, U, r_s, NUMBER_OF_MODES)
-    d_inc = np.array([np.cos(theta_inc), np.sin(theta_inc)])
-    U_inc = PlaneWave(X, Y, k, d_inc, U)
-    Z = U_tot_from_coefficients(X=X, Y=Y, k=k, N=eps_r,c=xy_c, R=R_sc, U=U, U_inc=U_inc, A=A, B=B)
-    Z_FEM = u_TOT(Omega(X.flatten(),Y.flatten())).reshape(X.shape)
-
     
-    u_FEM_np = u_FEM(Omega(points[:,0],points[:,1]))
-
     
     # plt.show()
     assert_allclose(Z_FEM, Z, rtol=1E1)

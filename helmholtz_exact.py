@@ -142,7 +142,7 @@ def U_tot_from_coefficients(X: float_array, Y: float_array, k: float, N: float,
     U_tot = np.where(r > R, U_out, U_in)
     return U_tot
 
-def U_tot_from_coefficients_conducting(X: float_array, Y: float_array, k: float, N: float,
+def U_tot_from_coefficients_conducting(X: float_array, Y: float_array, k: float,
                       c: float_array, R: float, U: complex,
                       U_inc: complex_array, A: complex_array) -> complex_array:
     M = (len(A)-1)//2
@@ -152,10 +152,9 @@ def U_tot_from_coefficients_conducting(X: float_array, Y: float_array, k: float,
     r = np.expand_dims(r, axis=-1)
     theta = np.arctan2(Y-c[1], X-c[0])
     theta = np.expand_dims(theta, axis=-1)
-    U_in  = np.dot(J(n,np.sqrt(N)*k*r)*np.exp(1j*n*theta), B)
     U_out = U_inc + np.dot(H1(n, k*r)*np.exp(1j*n*theta), A)
     r = np.squeeze(r)
-    U_tot = np.where(r > R, U_out, U_in)
+    U_tot = np.where(r > R, U_out, np.full_like(X,fill_value=np.nan))
     return U_tot
 
 
